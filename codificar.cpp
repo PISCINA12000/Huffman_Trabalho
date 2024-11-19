@@ -4,6 +4,25 @@
 #include "codigos_auxiliares/TAD_PilhaEnd.h"
 #include "codigos_auxiliares/TAD_PilhaStrings.h"
 
+// STRUCTS ---------------------------------------------
+struct bits
+{
+    unsigned char b7 : 1; // - significativo
+    unsigned char b6 : 1;
+    unsigned char b5 : 1;
+    unsigned char b4 : 1;
+    unsigned char b3 : 1;
+    unsigned char b2 : 1;
+    unsigned char b1 : 1;
+    unsigned char b0 : 1; // + significativo
+};
+union byte
+{
+    struct bits bi;
+    unsigned char num;
+};
+typedef union byte Byte;
+
 struct tabela
 {
     char palavras[100][40], codigo[100][40];
@@ -26,6 +45,7 @@ struct floresta
 };
 typedef struct floresta Floresta;
 
+// FUNCOES -------------------------------------------------------------------
 // FLORESTA
 Floresta *criaNoFloresta(int simbolo, int freq)
 {
@@ -221,27 +241,56 @@ void criarCodigos(ArvoreHuf *arvoreHuf, Tabela *tabela)
             }
             if (!isEmpty(p))
             {
-                pop(&p, &arvoreHuf); //tira o endereco da pilha
-                memset(codigo, '\0', sizeof(codigo)); //string reinicializada
-                popStringPilha(&ps, codigo); //tira a string com o caminho ateh o no
-                arvoreHuf = arvoreHuf->dir; //arvore vai para a direita
-                TLCod = strlen(codigo); //o tl recebe o tamanho do caminho atual
-                codigo[TLCod] = '1'; //caminho para a direita, ou seja, mais 1
-                TLCod++; //tl incrementado
+                pop(&p, &arvoreHuf);                  // tira o endereco da pilha
+                memset(codigo, '\0', sizeof(codigo)); // string reinicializada
+                popStringPilha(&ps, codigo);          // tira a string com o caminho ateh o no
+                arvoreHuf = arvoreHuf->dir;           // arvore vai para a direita
+                TLCod = strlen(codigo);               // o tl recebe o tamanho do caminho atual
+                codigo[TLCod] = '1';                  // caminho para a direita, ou seja, mais 1
+                TLCod++;                              // tl incrementado
             }
         }
     }
 }
 
+// ARQUIVOS BINARIOS
+void armazenarFraseCodificada(char *fraseCodificada)
+{
+    int i = 0;
+    Byte u;
+    FILE *Ptr = fopen("frase.dat", "wb+");
+    if (Ptr == NULL)
+        printf("Erro de Abertura");
+    else
+    {
+        while (fraseCodificada[i] != '\0')
+        {
+            u.bi.b0 = fraseCodificada[i] - '0';
+            u.bi.b1 = fraseCodificada[i + 1] - '0';
+            u.bi.b2 = fraseCodificada[i + 2] - '0';
+            u.bi.b3 = fraseCodificada[i + 3] - '0';
+            u.bi.b4 = fraseCodificada[i + 4] - '0';
+            u.bi.b5 = fraseCodificada[i + 5] - '0';
+            u.bi.b6 = fraseCodificada[i + 6] - '0';
+            u.bi.b7 = fraseCodificada[i + 7] - '0';
+            i = i + 8;
+            fwrite(&u.num, sizeof(char), 1, Ptr);
+        }
+    }
+
+    fclose(Ptr);
+}
+
 int main()
 {
     FILE *ptr = fopen("entrada2.txt", "r");
-    FILE *ptrBi = fopen("tabela.dat","wb");
+    FILE *ptrBi = fopen("tabela.dat", "wb");
+    FILE *ptrBits = fopen("numeroBits.dat","wb");
     Floresta *floresta, *auxFloresta;
     ArvoreHuf *arvoreHuf;
     Tabela tabela;
     LinhaTabela linha;
-    char caracter, palavraAux[40];
+    char caracter, palavraAux[40], fraseInteira[4000], fraseCodificada[500];
     int TLAux = 0;
 
     // inicializacao da minha tabela
@@ -322,34 +371,32 @@ int main()
             tabela.TL++;
         }
     }
-
-    // rewind(ptr); //volto o ponteiro para o inicio do arquivo
     fclose(ptr);
 
     // exibicao da tabela de palavras e frequencias
-    printf("\n\nPalavras:\n");
-    for (int i = 0; i < tabela.TL; i++)
-    {
-        printf("%s - ", tabela.palavras[i]);
-        printf("Frequencia: %d\n", tabela.freq[i]);
-    }
+    // printf("\n\nPalavras:\n");
+    // for (int i = 0; i < tabela.TL; i++)
+    // {
+    //     printf("%s - ", tabela.palavras[i]);
+    //     printf("Frequencia: %d\n", tabela.freq[i]);
+    // }
 
-    // criacao da FLORESTA
+    // CRIACAO DA FLORESTA
     floresta = NULL;
     for (int i = 0; i < tabela.TL; i++)
     {
         insereFlorestaOrd(&floresta, i + 1, tabela.freq[i]);
         tabela.simbolo[i] = i + 1;
     }
-    // exibir a floresta formada
-    printf("\n\nSimbolos e frequencias:\n");
-    auxFloresta = floresta;
-    while (auxFloresta)
-    {
-        printf("Simbolo: %d - ", auxFloresta->arvore->simbolo);
-        printf("Frequencia: %d\n", auxFloresta->arvore->freq);
-        auxFloresta = auxFloresta->prox;
-    }
+    // // exibir a floresta formada
+    // printf("\n\nSimbolos e frequencias:\n");
+    // auxFloresta = floresta;
+    // while (auxFloresta)
+    // {
+    //     printf("Simbolo: %d - ", auxFloresta->arvore->simbolo);
+    //     printf("Frequencia: %d\n", auxFloresta->arvore->freq);
+    //     auxFloresta = auxFloresta->prox;
+    // }
 
     // CRIAR A ARVORE DE HUFFMAN
     arvoreHuf = NULL;                       // inicializo a arvore
@@ -360,17 +407,17 @@ int main()
     // CRIAR OS CODIGOS DE HUFFMAN
     criarCodigos(arvoreHuf, &tabela);
     // Exibir tabela
-    printf("\n\nSimbolo\tPalavra\tFrequencia\tCodigo\n");
-    for (int i = 0; i < tabela.TL; i++)
-    {
-        printf("%d\t", tabela.simbolo[i]);
-        printf("%s\t", tabela.palavras[i]);
-        printf("%d\t", tabela.freq[i]);
-        printf("%s\n", tabela.codigo[i]);
-    }
+    // printf("\n\nSimbolo\tPalavra\tFrequencia\tCodigo\n");
+    // for (int i = 0; i < tabela.TL; i++)
+    // {
+    //     printf("%d\t", tabela.simbolo[i]);
+    //     printf("%s\t", tabela.palavras[i]);
+    //     printf("%d\t", tabela.freq[i]);
+    //     printf("%s\n", tabela.codigo[i]);
+    // }
 
-    //armazenar de 1 em 1 na struct "linha" e armazenar no arquivo binario
-    for(int i=0; i<tabela.TL; i++)
+    // CRIANDO A TABELA NO ARQUIVO BINARIO
+    for (int i = 0; i < tabela.TL; i++)
     {
         memset(linha.codigo, '\0', sizeof(linha.codigo));
         memset(linha.palavra, '\0', sizeof(linha.palavra));
@@ -378,21 +425,129 @@ int main()
         strcpy(linha.codigo, tabela.codigo[i]);
         linha.freq = tabela.freq[i];
         linha.simbolo = tabela.simbolo[i];
-        fwrite(&linha,sizeof(linha),1,ptrBi);
+        fwrite(&linha, sizeof(linha), 1, ptrBi);
     }
     fclose(ptrBi);
-    ptrBi = fopen("tabela.dat", "rb");
-    printf("\n\nLeitura do arquivo binario\n");
-    fread(&linha,sizeof(linha),1,ptrBi);
-    while(!feof(ptrBi))
+
+    // LEITURA DO ARQUIVO BINARIO
+    // ptrBi = fopen("tabela.dat", "rb");
+    // printf("\n\nLeitura do arquivo binario\n");
+    // fread(&linha, sizeof(linha), 1, ptrBi);
+    // while (!feof(ptrBi))
+    // {
+    //     printf("%d\t", linha.simbolo);
+    //     printf("%s\t", linha.palavra);
+    //     printf("%d\t", linha.freq);
+    //     printf("%s\n", linha.codigo);
+    //     fread(&linha, sizeof(linha), 1, ptrBi);
+    // }
+    // fclose(ptrBi);
+
+    // ARMAZENAR A ENTRADA EM UMA STRING PARA DEPOIS CODIFICA-LA COM A ARVORE E A TABELA
+    ptr = fopen("entrada2.txt", "r");
+    memset(fraseInteira, '\0', sizeof(fraseInteira));
+    fraseInteira[strlen(fraseInteira)] = fgetc(ptr);
+    while (!feof(ptr))
     {
-        printf("%d\t", linha.simbolo);
-        printf("%s\t", linha.palavra);
-        printf("%d\t", linha.freq);
-        printf("%s\n", linha.codigo);
-        fread(&linha,sizeof(linha),1,ptrBi);
+        fraseInteira[strlen(fraseInteira)] = fgetc(ptr);
     }
-    fclose(ptrBi);
+    fraseInteira[strlen(fraseInteira) - 1] = '\0'; // previne da string nao armazenar o final de arquivo
+    printf("%s\n", fraseInteira);
+    fclose(ptr);
+
+    // CODIFICANDO A ENTRADA INTEIRA E PARA DEPOIS ARMAZENAR O CODIGO
+    memset(palavraAux, '\0', sizeof(palavraAux));
+    memset(fraseCodificada, '\0', sizeof(fraseCodificada));
+    TLAux = 0;
+    int TLCod = 0;
+    for (int i = 0; i < strlen(fraseInteira); i++)
+    {
+        palavraAux[TLAux] = fraseInteira[i];
+        TLAux++;
+        if (palavraAux[TLAux - 1] == ' ') // se o caracter lido for igual a espaço
+        {
+            // buscar a respectiva palavra
+            palavraAux[TLAux - 1] = '\0';
+            TLAux--;
+            int pos = 0;
+            while (pos < tabela.TL && strcmp(palavraAux, tabela.palavras[pos]) != 0)
+                pos++;
+            if (pos < tabela.TL) // achei na minha tabela a palavra
+            {
+                for (int j = 0; j < strlen(tabela.codigo[pos]); j++)
+                {
+                    fraseCodificada[TLCod] = tabela.codigo[pos][j];
+                    TLCod++;
+                }
+            }
+            else
+            {
+                printf("Erro a palavra '%s' nao existe\n", tabela.palavras[pos]);
+            }
+            memset(palavraAux, '\0', sizeof(palavraAux)); // reinicio a minha string auxiliar
+            TLAux = 0;
+
+            pos = 0;
+            while (pos < tabela.TL && strcmp(" ", tabela.palavras[pos]) != 0)
+                pos++;
+            if (pos < tabela.TL) // achei na minha tabela a palavra
+            {
+                for (int j = 0; j < strlen(tabela.codigo[pos]); j++)
+                {
+                    fraseCodificada[TLCod] = tabela.codigo[pos][j];
+                    TLCod++;
+                }
+            }
+            else // nao existe na tabela
+            {
+                printf("Erro, palavra '%s' nao existe\n", tabela.palavras[pos]);
+            }
+        }
+    }
+    if (palavraAux[0] != '\0')
+    {
+        int pos = 0;
+        while (pos < tabela.TL && strcmp(palavraAux, tabela.palavras[pos]) != 0)
+            pos++;
+        if (pos < tabela.TL) // achei a palavra
+        {
+            for (int j = 0; j < strlen(tabela.codigo[pos]); j++)
+            {
+                fraseCodificada[TLCod] = tabela.codigo[pos][j];
+                TLCod++;
+            }
+        }
+        else
+        {
+            printf("Erro a palavra '%s' nao existe\n", tabela.palavras[pos]);
+        }
+    }
+    printf("\n\nFrase codificada:\n");
+    printf("%s\n", fraseCodificada);
+    printf("\n\nBytes inteiros na frase codificada: %ld\n", strlen(fraseCodificada) / 8);
+    printf("Numero de bits faltantes: %ld\n", 8 - strlen(fraseCodificada) % 8);
+    int restantes = 8 - strlen(fraseCodificada) % 8;
+    if (restantes < 8)
+    {
+        for (int i = 0; i < restantes; i++)
+        {
+            fraseCodificada[strlen(fraseCodificada)] = '0';
+        }
+        fwrite(&restantes,sizeof(int),1,ptrBits);
+    }
+    else
+    {
+        restantes = 0;
+        fwrite(&restantes,sizeof(int),1,ptrBits);
+    }
+    printf("\n\nFrase codificada:\n");
+    printf("%s\n", fraseCodificada);
+    armazenarFraseCodificada(fraseCodificada);
+    printf("\n\nBits a mais:\n");
+    fseek(ptrBits,0,0);
+    fread(&restantes,sizeof(int),1,ptrBits);
+    printf("%d\n",restantes);
+    fcloseall();
 
     return 0;
 }
