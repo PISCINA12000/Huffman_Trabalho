@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+// STRUCTS-----------------------------------------------------------------------
 struct bits
 {
     unsigned char b7 : 1; // - significativo
@@ -43,7 +44,8 @@ struct tabela
 };
 typedef struct tabela Tabela;
 
-// FUNCOES -----------------------------------------------------
+// FUNCOES ----------------------------------------------------------------------
+// ARQUIVO BINARIO***************************************************************
 void lerArqFraseCodificada(char *fraseCodificada)
 {
     FILE *Ptr = fopen("frase.dat", "rb");
@@ -75,6 +77,7 @@ void lerArqFraseCodificada(char *fraseCodificada)
     }
     fclose(Ptr);
 }
+// ARVORE HUFFMAN****************************************************************
 Arvore *criaNo(int simbolo)
 {
     Arvore *NC;
@@ -97,7 +100,7 @@ void construirArvoreBB(Arvore **raiz)
         while (!feof(Ptr))
         {
             Arvore *NC, *aux;
-            char codigo[8];
+            char codigo[40];
             int i = 0;
 
             codigo[0] = '\0';
@@ -149,6 +152,7 @@ void exibeArvore(Arvore *arvore)
     exibeArvore(arvore->esq);
     n--;
 }
+// LISTA ENCADEADA***************************************************************
 Tabela* criaNoTabela(LinhaTabela linha)
 {
     Tabela *nova = (Tabela*)malloc(sizeof(Tabela));
@@ -174,6 +178,7 @@ void inserirTabela(Tabela **tabela, LinhaTabela linha)
         *tabela = criaNoTabela(linha);
     }
 }
+// DECODIFICACAO*****************************************************************
 void decodificarTexto(Arvore *raiz, char *fraseCodificada, Tabela *tabela)
 {
     Arvore *atual = raiz;
@@ -218,9 +223,12 @@ void decodificarTexto(Arvore *raiz, char *fraseCodificada, Tabela *tabela)
         }
         atual = raiz;
     }
-    printf("%s\n",texto);
+
+    // EXIBICAO DO TEXTO RECUPERADO DA DECODIFICACAO
+    printf("\n\n%s\n",texto);
 }
 
+// INT MAIN**********************************************************************
 int main()
 {
     FILE *ptrBits = fopen("numeroBits.dat","rb");
@@ -231,41 +239,58 @@ int main()
     char fraseCodificada[500];
     int restantes;
 
-    memset(fraseCodificada,'\0',sizeof(fraseCodificada));
-    lerArqFraseCodificada(fraseCodificada);
-    printf("Frase codificada:\n%s\n", fraseCodificada);
+    memset(fraseCodificada,'\0',sizeof(fraseCodificada)); // INICIO A FRASE
+    lerArqFraseCodificada(fraseCodificada); //LEIO A FRASE DO ARQUIVO BINARIO
+    printf("Frase codificada:\n%s\n", fraseCodificada); // EXIBO A FRASE LIDA DO ARQ. BI.
+
+    // CONSTRUCAO DA ARVORE A PARTIR DA TABELA DO ARQ. BI.
     construirArvoreBB(&raiz);
+
+    // EXIBICAO DA ARVORE GERADA
+    printf("\n\nArvore gerada:\n");
     exibeArvore(raiz);
+
+    // LEITURA DOS BITS "A MAIS" NA MINHA STRING CODIFICADA
     fread(&restantes,sizeof(int),1,ptrBits);
+    
+    // EXIBICAO DOS BITS "A MAIS" PARA SABER SE MINHA LEITURA ESTA CORRETA
     // printf("\n%d\n",restantes);
     // int TL = strlen(fraseCodificada);
+
+    // CORRECAO DA MINHA STRING A USANDO O NUMERO DE BITS COMO O MEU NUMERO DE INTERACOES
     for(int i=0; i<restantes; i++)
     {
         fraseCodificada[strlen(fraseCodificada)-1] = '\0';
     }
-    printf("\n\nFrase codificada novamente\n");
-    printf("%s\n",fraseCodificada);
+
+    // EXIBICAO DA FRASE CODIFICADA CORRIGIDA
+    // printf("\n\nFrase codificada novamente\n");
+    // printf("%s\n",fraseCodificada);
     fcloseall();
 
-    //ler a tabela do arquivo binario e deixar em lista encadeada
+    // COLOCAR A TABELA DO ARQ. BI. EM LISTA ENCADEADA PARA MANIPULACAO MAIS RAPIDA
     fread(&linha,sizeof(LinhaTabela),1,ptrTabela);
     while(!feof(ptrTabela))
     {
-        printf("%s\n",linha.palavra);
+        //printf("%s\n",linha.palavra); // EXIBICAO DAS PALAVRAS DO ARQ. BI.
         inserirTabela(&tabela, linha);
         fread(&linha,sizeof(LinhaTabela),1,ptrTabela);
     }
-    //exibir a lista recuperada
-    atual = tabela;
-    while(atual)
-    {
-        printf("%s - ",atual->info.palavra);
-        printf("%s - ",atual->info.codigo);
-        printf("%d\n",atual->info.simbolo);
-        atual = atual->prox;
-    }
+
+    // EXIBICAO DA LISTA AGORA EM MEMORIA
+    // atual = tabela;
+    // while(atual)
+    // {
+    //     printf("%s - ",atual->info.palavra);
+    //     printf("%s - ",atual->info.codigo);
+    //     printf("%d\n",atual->info.simbolo);
+    //     atual = atual->prox;
+    // }
     fcloseall();
+
+    // DECODIFICACAO DA STRING DO ARQUIVO BINARIO
     decodificarTexto(raiz,fraseCodificada,tabela);
+    // A EXIBICAO DO TEXTO RECUPERADO DA STRING CODIFICADA OCORRE DENTRO DA FUNCAO
 
     return 0;
 }

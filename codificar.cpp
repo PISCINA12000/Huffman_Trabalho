@@ -4,7 +4,7 @@
 #include "codigos_auxiliares/TAD_PilhaEnd.h"
 #include "codigos_auxiliares/TAD_PilhaStrings.h"
 
-// STRUCTS ---------------------------------------------
+// STRUCTS -------------------------------------------------------------------
 struct bits
 {
     unsigned char b7 : 1; // - significativo
@@ -281,9 +281,10 @@ void armazenarFraseCodificada(char *fraseCodificada)
     fclose(Ptr);
 }
 
+// INT MAIN ------------------------------------------------------------------
 int main()
 {
-    FILE *ptr = fopen("entrada2.txt", "r");
+    FILE *ptr = fopen("entrada.txt", "r");
     FILE *ptrBi = fopen("tabela.dat", "wb");
     FILE *ptrBits = fopen("numeroBits.dat","wb");
     Floresta *floresta, *auxFloresta;
@@ -309,7 +310,7 @@ int main()
     while (!feof(ptr))
     {
         // leitura do caracter
-        printf("%c", caracter); // printar na tela o caracter
+        //printf("%c", caracter); // printar na tela o caracter
         if (caracter == ' ')    // se o caracter lido for igual a espaço
         {
             // preciso buscar se jah existe o espaco (' ')
@@ -430,18 +431,18 @@ int main()
     fclose(ptrBi);
 
     // LEITURA DO ARQUIVO BINARIO
-    // ptrBi = fopen("tabela.dat", "rb");
-    // printf("\n\nLeitura do arquivo binario\n");
-    // fread(&linha, sizeof(linha), 1, ptrBi);
-    // while (!feof(ptrBi))
-    // {
-    //     printf("%d\t", linha.simbolo);
-    //     printf("%s\t", linha.palavra);
-    //     printf("%d\t", linha.freq);
-    //     printf("%s\n", linha.codigo);
-    //     fread(&linha, sizeof(linha), 1, ptrBi);
-    // }
-    // fclose(ptrBi);
+    ptrBi = fopen("tabela.dat", "rb");
+    printf("\n\nLeitura do arquivo binario\n");
+    fread(&linha, sizeof(linha), 1, ptrBi);
+    while (!feof(ptrBi))
+    {
+        printf("%d\t", linha.simbolo);
+        printf("%s\t", linha.palavra);
+        printf("%d\t", linha.freq);
+        printf("%s\n", linha.codigo);
+        fread(&linha, sizeof(linha), 1, ptrBi);
+    }
+    fclose(ptrBi);
 
     // ARMAZENAR A ENTRADA EM UMA STRING PARA DEPOIS CODIFICA-LA COM A ARVORE E A TABELA
     ptr = fopen("entrada2.txt", "r");
@@ -451,11 +452,11 @@ int main()
     {
         fraseInteira[strlen(fraseInteira)] = fgetc(ptr);
     }
-    fraseInteira[strlen(fraseInteira) - 1] = '\0'; // previne da string nao armazenar o final de arquivo
-    printf("%s\n", fraseInteira);
+    fraseInteira[strlen(fraseInteira) - 1] = '\0'; // RETIRA O EOF AO FINAL DA STRING
+    //printf("%s\n", fraseInteira);
     fclose(ptr);
 
-    // CODIFICANDO A ENTRADA INTEIRA E PARA DEPOIS ARMAZENAR O CODIGO
+    // CODIFICANDO A ENTRADA INTEIRA PARA DEPOIS ARMAZENAR O CODIGO
     memset(palavraAux, '\0', sizeof(palavraAux));
     memset(fraseCodificada, '\0', sizeof(fraseCodificada));
     TLAux = 0;
@@ -522,12 +523,15 @@ int main()
             printf("Erro a palavra '%s' nao existe\n", tabela.palavras[pos]);
         }
     }
-    printf("\n\nFrase codificada:\n");
-    printf("%s\n", fraseCodificada);
-    printf("\n\nBytes inteiros na frase codificada: %ld\n", strlen(fraseCodificada) / 8);
-    printf("Numero de bits faltantes: %ld\n", 8 - strlen(fraseCodificada) % 8);
+    // EXIBICAO DA FRASE CODIFICADA
+    // printf("\n\nFrase codificada:\n");
+    // printf("%s\n", fraseCodificada);
+    // printf("\n\nBytes inteiros na frase codificada: %ld\n", strlen(fraseCodificada) / 8);
+    // printf("Numero de bits faltantes: %ld\n", 8 - strlen(fraseCodificada) % 8);
+
+    // FAZ A CALCULO PARA DESCOBRIR QUANTOS ZEROS COLOCAR AO FINAL DA STRING CODIFICADA
     int restantes = 8 - strlen(fraseCodificada) % 8;
-    if (restantes < 8)
+    if (restantes < 8) // SE MENOR QUE 8 ENTAO A FRASE CODIFICADA NAO EH MULTIPLA DE 8
     {
         for (int i = 0; i < restantes; i++)
         {
@@ -535,18 +539,24 @@ int main()
         }
         fwrite(&restantes,sizeof(int),1,ptrBits);
     }
-    else
+    else // SE FOR IGUAL A 8 QUER DIZER QUE EH MULTIPLA DE 8. ESTAH CORRETO
     {
         restantes = 0;
         fwrite(&restantes,sizeof(int),1,ptrBits);
     }
+
+    // EXIBICAO DA FRASE CODIFICADA COM OS DEVIDOS ZEROS
     printf("\n\nFrase codificada:\n");
     printf("%s\n", fraseCodificada);
+
+    // ARMAZENAMENTO DA FRASE CODIFICADA EM UM ARQUIVO BINARIO
     armazenarFraseCodificada(fraseCodificada);
-    printf("\n\nBits a mais:\n");
-    fseek(ptrBits,0,0);
-    fread(&restantes,sizeof(int),1,ptrBits);
-    printf("%d\n",restantes);
+    
+    // LEITURA DO ARQUIVO QUE CONTEM A QUANTIDADE DE ZEROS ADICIONADA A STRIG CODIFICADA
+    // printf("\n\nBits a mais:\n");
+    // fseek(ptrBits,0,0);
+    // fread(&restantes,sizeof(int),1,ptrBits);
+    // printf("%d\n",restantes);
     fcloseall();
 
     return 0;
