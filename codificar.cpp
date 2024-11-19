@@ -284,7 +284,7 @@ void armazenarFraseCodificada(char *fraseCodificada)
 // INT MAIN ------------------------------------------------------------------
 int main()
 {
-    FILE *ptr = fopen("entrada.txt", "r");
+    FILE *ptr = fopen("entrada3.txt", "r");
     FILE *ptrBi = fopen("tabela.dat", "wb");
     FILE *ptrBits = fopen("numeroBits.dat","wb");
     Floresta *floresta, *auxFloresta;
@@ -444,8 +444,9 @@ int main()
     }
     fclose(ptrBi);
 
+    // SE MUDAR O ARQUIVO LOGO APOS O INT MAIN, TERA QUE MUDAR O ARQUIVO DE ENTRADA LOGO ABAIXO TAMBEM
     // ARMAZENAR A ENTRADA EM UMA STRING PARA DEPOIS CODIFICA-LA COM A ARVORE E A TABELA
-    ptr = fopen("entrada2.txt", "r");
+    ptr = fopen("entrada3.txt", "r");
     memset(fraseInteira, '\0', sizeof(fraseInteira));
     fraseInteira[strlen(fraseInteira)] = fgetc(ptr);
     while (!feof(ptr))
